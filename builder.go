@@ -51,7 +51,7 @@ func buildDocRouter(r chi.Routes) DocRouter {
 					continue
 				}
 
-				dh := DocHandler{Method: method, Middlewares: []DocMiddleware{}}
+				dh := DocHandler{Method: method, Middlewares: []DocMiddleware{}, Name_: rt.Name_}
 
 				var endpoint http.Handler
 				chain, _ := h.(*chi.ChainHandler)

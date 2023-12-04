@@ -32,6 +32,7 @@ type DocHandler struct {
 	Middlewares []DocMiddleware `json:"middlewares"`
 	Method      string          `json:"method"`
 	FuncInfo
+	Name_ string
 }
 
 type DocHandlers map[string]DocHandler // Method : DocHandler

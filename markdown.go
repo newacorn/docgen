@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -33,7 +34,8 @@ type MarkdownOpts struct {
 	// Used for mapping vendored dependencies to their upstream sources
 	// For example:
 	// map[string]string{"github.com/my/package/vendor/go-chi/chi/": "https://github.com/go-chi/chi/blob/master/"}
-	URLMap map[string]string
+	URLMap     map[string]string
+	GenUrlFunc func(file string, line string) string
 }
 
 func MarkdownRoutesDoc(r chi.Router, opts MarkdownOpts) string {
@@ -172,7 +174,12 @@ func (md *MarkdownDoc) WriteRoutes() {
 	for _, pat := range routePaths {
 		dr := md.Routes[pat]
 		md.buf.WriteString(fmt.Sprintf("<details>\n"))
-		md.buf.WriteString(fmt.Sprintf("<summary>`%s`</summary>\n", normalizer(pat)))
+		if dr.Routes[pat].Router != nil {
+			md.buf.WriteString(fmt.Sprintf("<summary>`%s`</summary>\n", strings.Replace(pat, "/*", "", -1)))
+		} else {
+			md.buf.WriteString(fmt.Sprintf("<summary>`%s`</summary>\n", normalizer(pat)))
+		}
+
 		md.buf.WriteString(fmt.Sprintf("\n"))
 		printRouter(0, dr)
 		md.buf.WriteString(fmt.Sprintf("\n"))
@@ -186,6 +193,10 @@ func (md *MarkdownDoc) WriteRoutes() {
 }
 
 func (md *MarkdownDoc) githubSourceURL(file string, line int) string {
+	if md.Opts.GenUrlFunc != nil {
+		return md.Opts.GenUrlFunc(file, strconv.Itoa(line))
+	}
+
 	// Currently, we only automatically link to source for github projects
 	if strings.Index(file, "github.com/") != 0 && !md.Opts.ForceRelativeLinks {
 		return ""
@@ -211,8 +222,14 @@ func (md *MarkdownDoc) githubSourceURL(file string, line int) string {
 }
 
 func normalizer(s string) string {
-	if strings.Contains(s, "/*") {
-		return strings.Replace(s, "/*", "", -1)
+	if len(s) > 2 {
+		if strings.Contains(s[:len(s)-2], "/*") {
+			if s[len(s)-2:len(s)] == "/*" {
+				return strings.Replace(s, "/*", "", -1) + "/*"
+			} else {
+				return strings.Replace(s, "/*", "", -1)
+			}
+		}
 	}
 	return s
 }
